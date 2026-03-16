@@ -1,0 +1,66 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  workflow_dispatch:   # enables manual trigger
+
+env:
+  PROJECT_ID: first-project-0768
+  REGION: asia-south1
+  SERVICE: oicd-clean-service
+  REPOSITORY: oicd-clean
+  WORKLOAD_IDENTITY_PROVIDER: projects/953297108008/locations/global/workloadIdentityPools/ghpool-clean/providers/github-clean
+  SERVICE_ACCOUNT: oicd-clean@first-project-0768.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+          # project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+          # echo "=== Activating service account credentials ==="
+          # gcloud auth login --brief --cred-file="${{ steps.auth.outputs.credentials_file_path }}"
+
+      - name: Activate Service Account and Configure Docker
+        run: |
+          echo "=== Verifying authentication ==="
+          gcloud auth list
+          echo "=== Configuring Docker ==="
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+          echo "=== Docker configured successfully ==="
+
+      - name: Build Docker Image
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          echo "Building Docker image: $IMAGE"
+          docker build --progress=plain -t "$IMAGE" .
+
+      - name: Push Docker Image
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          echo "Pushing Docker image: $IMAGE"
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
