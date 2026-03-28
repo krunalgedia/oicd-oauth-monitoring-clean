@@ -4,12 +4,12 @@ on:
   workflow_dispatch:   # enables manual trigger
 
 env:
-  PROJECT_ID: first-project-0768
-  REGION: asia-south1
+  PROJECT_ID: gcp-part2-3eaf
+  REGION: us-central1
   SERVICE: oicd-clean-service
-  REPOSITORY: oicd-clean
-  WORKLOAD_IDENTITY_PROVIDER: projects/953297108008/locations/global/workloadIdentityPools/ghpool-clean/providers/github-clean
-  SERVICE_ACCOUNT: oicd-clean@first-project-0768.iam.gserviceaccount.com
+  REPOSITORY: oicd-repo
+  WORKLOAD_IDENTITY_PROVIDER: projects/72381031487/locations/global/workloadIdentityPools/ghpool-clean/providers/github-clean
+  SERVICE_ACCOUNT: oicd-clean@gcp-part2-3eaf.iam.gserviceaccount.com
 
 jobs:
   deploy:
